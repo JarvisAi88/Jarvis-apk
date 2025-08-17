@@ -1,15 +1,4 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        // Android Gradle Plugin compatible with Gradle 8.7
-        classpath "com.android.tools.build:gradle:8.4.2"
-    }
-}
-
-// Keep plugin here without version; AGP comes from buildscript classpath above
 plugins {
-    id 'com.android.application' apply false
+    id("com.android.application") version "8.4.2" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.23" apply false
 }
