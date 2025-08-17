@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jarvis</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0b10;color:#e9eef5;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{display:flex;align-items:center;justify-content:center;height:100%}
+  .card{background:#12121a;border:1px solid #272739;border-radius:16px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:640px}
+  h1{margin:0 0 8px;font-size:28px;letter-spacing:.5px}
+  p{opacity:.85;line-height:1.5}
+  code{background:#1a1a25;padding:2px 6px;border-radius:6px}
+  .hint{margin-top:12px;font-size:12px;opacity:.7}
+</style>
+<div class="wrap"><div class="card">
+  <h1>Jarvis for Android</h1>
+  <p>Clean WebView container is ready. We’ll replace this view with the full interactive UI later.</p>
+  <p class="hint">Build is generated in GitHub Actions → Artifacts → <code>app-debug</code></p>
+</div></div>
+</html>
