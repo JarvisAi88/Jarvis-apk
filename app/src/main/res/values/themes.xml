@@ -1,0 +1,4 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Single-line theme that gives you M3 + no action bar -->
+    <style name="Theme.Jarvis" parent="Theme.Material3.DayNight.NoActionBar"/>
+</resources>
