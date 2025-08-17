@@ -1,0 +1,197 @@
+name: Android Debug APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Gradle via SDKMAN
+        shell: bash
+        run: |
+          curl -s https://get.sdkman.io | bash
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk install gradle 8.7
+          gradle --version
+
+      - name: Bootstrap minimal Android project
+        shell: bash
+        run: |
+          # create skeleton
+          mkdir -p app/src/main/java/com/jarvis/app
+          mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/assets
+
+          # settings.gradle
+          cat > settings.gradle <<'EOF'
+          rootProject.name = "JarvisApk"
+          include(":app")
+          EOF
+
+          # root build.gradle
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.5.0' apply false
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          # app/build.gradle
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.jarvis.app'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.jarvis.app"
+                  minSdk 26
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.7.0'
+              implementation 'com.google.android.material:material:1.12.0'
+              implementation 'androidx.webkit:webkit:1.11.0'
+              implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+          }
+          EOF
+
+          # proguard
+          echo "// keep rules" > app/proguard-rules.pro
+
+          # AndroidManifest
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.jarvis.app">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <application
+                android:label="Jarvis"
+                android:usesCleartextTraffic="true"
+                android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+              <activity android:name=".MainActivity"
+                        android:exported="true">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          EOF
+
+          # layout
+          cat > app/src/main/res/layout/activity_main.xml <<'EOF'
+          <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+              <WebView
+                  android:id="@+id/web"
+                  android:layout_width="match_parent"
+                  android:layout_height="match_parent"/>
+          </FrameLayout>
+          EOF
+
+          # MainActivity
+          cat > app/src/main/java/com/jarvis/app/MainActivity.java <<'EOF'
+          package com.jarvis.app;
+
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          import androidx.appcompat.app.AppCompatActivity;
+
+          public class MainActivity extends AppCompatActivity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  setContentView(R.layout.activity_main);
+
+                  WebView wv = findViewById(R.id.web);
+                  WebSettings s = wv.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  wv.setWebViewClient(new WebViewClient());
+                  // Load local offline UI from assets
+                  wv.loadUrl("file:///android_asset/index.html");
+              }
+          }
+          EOF
+
+          # gradle.properties
+          cat > gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+
+          # local offline UI: copy from repo if present, else stub
+          if [ -f index.html ]; then
+            cp -f index.html app/src/main/assets/index.html
+          else
+            cat > app/src/main/assets/index.html <<'EON'
+            <!DOCTYPE html><html><head><meta charset="utf-8">
+            <title>Jarvis</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            </head><body style="font-family:sans-serif">
+              <h1>Jarvis</h1>
+              <p>Offline UI placeholder. Commit your own <code>index.html</code> to replace me.</p>
+            </body></html>
+            EON
+          fi
+
+          # generate wrapper using installed gradle
+          gradle wrapper --gradle-version 8.7
+          ./gradlew --version
+
+      - name: Build debug APK
+        shell: bash
+        run: |
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/*.apk
